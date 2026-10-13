@@ -11,12 +11,7 @@ In a Claude Code session:
 /plugin install dev@victor-tools
 ```
 
-For a private repo, git must authenticate without prompts. Once per machine:
-
-```
-gh auth login
-gh auth setup-git
-```
+The repo is public, so no GitHub login is needed.
 
 ## Updates
 
@@ -44,6 +39,8 @@ The plugin has no `version`, so every pushed commit is a new version.
 - Linear: set `LINEAR_API_KEY`, or connect the Linear MCP (`/mcp`).
 
 ### english
+
+Guía completa en español: [plugins/english/README.md](plugins/english/README.md)
 
 ```
 /plugin install english@victor-tools

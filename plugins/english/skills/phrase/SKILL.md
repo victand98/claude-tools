@@ -1,6 +1,6 @@
 ---
 name: phrase
-description: Explain English phrases I heard at work and turn them into Anki cards (recognize + produce) through AnkiConnect. Use when I ask to save, learn or add an English phrase or expression to Anki, paste a meeting transcript or chat to mine phrases, or ask for my weekly phrase review.
+description: For Spanish speakers - explain English phrases I heard at work or class and turn them into Anki cards (recognize + produce) through AnkiConnect. Use when I ask to save, learn or add an English phrase or expression to Anki, paste a meeting transcript or chat to mine phrases, or ask for my weekly phrase review.
 argument-hint: "[<phrase> [-- <context>]] | [transcript: <text>] | [review [days]] | [setup] [source <name>]"
 effort: medium
 allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/anki.py *) Write(~/.english-phrases/**)
@@ -8,9 +8,13 @@ allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/anki.py *) Write(~/.engl
 
 # English phrase → Anki
 
-I am a Spanish speaker (Ecuador) working as a software developer in English.
-Talk to me in **Spanish**. Card meanings and prompts are in Spanish; phrases,
-sentences and examples are in English.
+I am a Spanish speaker who works or studies in English.
+Talk to me in **Spanish** (neutral Latin American Spanish unless I write in another variety).
+Card meanings and prompts are in Spanish; phrases, sentences and examples are in English.
+
+**My context** for examples and roleplays: infer it from where I heard the phrases
+(meetings, Slack, classes, sales calls, code reviews…). If there is no clue yet, use a
+generic office/remote-team setting.
 
 ## Current Anki state
 
@@ -53,7 +57,7 @@ Fields:
 | `Meaning` | Natural Spanish meaning, short (max ~12 words). Not a literal translation |
 | `Register` | Spanish, compact: formality · where it is used · variety if marked. e.g. `informal · jerga corporativa · EE. UU.` |
 | `Simpler` | A simpler English way to say it, B1 level |
-| `Example` | One new English example in a software-team context (standups, PRs, sprint planning, incidents, Slack) |
+| `Example` | One new English example in my context (see "My context" above) |
 | `MyExample` | Empty unless I write one (see preview) |
 | `Prompt` | Spanish situation that makes me produce the phrase without giving it away: `En la standup quieres decir que retomarás el tema después.` |
 | `Context` | Where I heard it + date: `standup · 2026-10-13`. Add who/what only if I said it |
@@ -94,9 +98,9 @@ then store the corrected version in `MyExample`.
 ## Mine mode (transcript or chat)
 
 1. Read the text and pick the **5–8 most useful** expressions for me: idioms, phrasal verbs,
-   collocations and work jargon a B1–B2 developer would not fully understand or would not
-   produce. Skip basic vocabulary, technical terms I know as a developer (deploy, merge,
-   endpoint), names and filler.
+   collocations and work jargon a B1–B2 learner would not fully understand or would not
+   produce. Skip basic vocabulary, technical terms of my own field that I clearly already
+   use, names and filler.
 2. Prefer phrases that appear in a full, clear sentence; use that sentence verbatim as `Sentence`.
 3. Show a numbered list: phrase — Spanish meaning — the sentence. Ask:
    "¿Cuáles agrego? (ej. `1,3,5` o `todas`)".
@@ -114,13 +118,13 @@ then store the corrected version in `MyExample`.
      Offer to rewrite those cards (clearer `Sentence`, better `Prompt`, a mnemonic in `Meaning`).
      If I accept, write `[{"noteId": N, "fields": {...}, "removeTags": "leech"}]` to
      `~/.english-phrases/update.json` and run `anki.py update ~/.english-phrases/update.json`.
-   - **Roleplay de 5 minutos**: a short realistic work scene (standup, PR review or
-     sprint planning) where the other person speaks in English and leaves gaps for me.
+   - **Roleplay de 5 minutos**: a short realistic scene from my context (a meeting,
+     a call, a chat with a colleague…) where the other person speaks in English and leaves gaps for me.
      Use 4–6 of the failed or recent phrases. Then play the scene with me turn by turn:
      I answer, you reply in character, and at the end give a short correction list
      (max 5 points: what I said → more natural version).
    - **Para usar esta semana**: pick 2–3 phrases and suggest the exact moment to use each
-     in a real standup or Slack message.
+     in a real meeting, call or message.
 
 ## Setup mode
 
