@@ -9,6 +9,11 @@
       "name": "dev",
       "source": "./plugins/dev",
       "description": "Daily developer workflows: standup generation from git, GitHub and Linear"
+    },
+    {
+      "name": "english",
+      "source": "./plugins/english",
+      "description": "English phrases from work → explained and saved as Anki cards (AnkiConnect), with weekly review"
     }
   ]
 }
