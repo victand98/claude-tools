@@ -1,0 +1,7 @@
+{
+  "name": "dev",
+  "description": "Daily developer workflows: standup generation from git, GitHub and Linear",
+  "author": {
+    "name": "Víctor Andrés Rojas"
+  }
+}

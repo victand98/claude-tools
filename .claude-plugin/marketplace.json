@@ -1,0 +1,14 @@
+{
+  "name": "victor-tools",
+  "description": "Víctor's personal Claude Code plugins",
+  "owner": {
+    "name": "Víctor Andrés Rojas"
+  },
+  "plugins": [
+    {
+      "name": "dev",
+      "source": "./plugins/dev",
+      "description": "Daily developer workflows: standup generation from git, GitHub and Linear"
+    }
+  ]
+}
