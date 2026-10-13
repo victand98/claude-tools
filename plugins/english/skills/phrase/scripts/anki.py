@@ -190,9 +190,9 @@ def cmd_setup():
     except (RuntimeError, KeyError, TypeError) as e:
         done.append(f"preset not changed ({e}); set it by hand")
     out({"ok": True, "done": done, "manual": [
-        "Settings → Review: enable FSRS (applies to all decks)",
-        f"Deck options of '{PRESET}': desired retention 0.90",
-        "Lapses → leech action: Tag only",
+        f"Deck options of '{DECK}' → FSRS section: turn FSRS on (applies to all decks)",
+        f"Same screen, preset '{PRESET}': desired retention 0.90",
+        "Lapses → leech action: Tag only → Save",
         "Log in to AnkiWeb (Sync button) so cards reach your phone",
     ]})
 
