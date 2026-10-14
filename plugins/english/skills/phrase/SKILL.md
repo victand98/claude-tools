@@ -23,7 +23,7 @@ generic office/remote-team setting.
 
 !`python3 ${CLAUDE_SKILL_DIR}/scripts/anki.py status`
 
-Script: `python3 ${CLAUDE_SKILL_DIR}/scripts/anki.py <status|setup|add FILE|update FILE|list|flush|review [days]|sync>`.
+Script: `python3 ${CLAUDE_SKILL_DIR}/scripts/anki.py <status|setup|add FILE|update FILE|list|shared|flush|review [days]|sync>`.
 It prints JSON. It dedups by phrase, generates MP3 audio with `edge-tts` (two US voices, alternating),
 stores images, queues notes in `~/.english-phrases/pending.json` when Anki is closed, adds the queue
 on the next `add`/`flush`, and syncs to AnkiWeb after writing.
@@ -46,6 +46,7 @@ Before any mode:
 - If `setup_done` is false, run **Setup** (it also upgrades old cards).
 - If `audio_engine` is `missing`, tell me once, in Spanish, to install it and continue without audio:
   `pipx install edge-tts` (or `pip install --user edge-tts`; on Windows `py -m pip install edge-tts`).
+- If `shared_sentences` > 0, run **Fix shared sentences** (below) before the requested mode, after asking me in one line.
 - If `anki: closed`, say once: "Anki está cerrado: guardo las tarjetas en la cola y se agregan
   la próxima vez." and continue (Add/Mine still work; Review and Setup need Anki open).
 
@@ -70,6 +71,24 @@ Fields (all in **English**):
 | `Context` | Where I heard it + date: `standup · 2026-10-13`. Add who/what only if I said it |
 | `tags` | `source::<name>`, `register::<formal|neutral|informal|slang|corporate>` (one or two) |
 | `image` | Optional, see Images. A local path or an http(s) URL; the script stores it |
+
+### One target per sentence (important)
+
+Each card must test **one** thing, and each sentence must belong to **one** card only.
+Reusing a sentence for several phrases makes me memorize the sentence instead of the phrase,
+and similar cards interfere with each other (the main cause of forgetting in spaced repetition).
+Seeing a phrase in **different** sentences also helps learning more than repeating the same one.
+
+- A heard sentence is used verbatim for **only one** phrase: the most useful one in it.
+- Every other phrase from that same sentence gets a **new, natural sentence** in my context,
+  and the heard sentence goes in its `Context` as a quote: `meeting · 2026-10-13 — "We need to touch base and get the ball rolling."`
+- In `Sentence`, only the target phrase is bold, and the rest of the sentence should be easy (no other new expressions).
+- `Example` must be a different sentence from `Sentence`, ideally in a different situation.
+- The script enforces this: a phrase whose sentence is already used by another note returns
+  `status: "sentence_conflict"` and is **not** added. When that happens, write a new sentence for it
+  (keep the heard one in `Context`), show me the change in one line, and add it again — no extra confirmation needed.
+- If the phrase already exists and I heard it in a new sentence, just add it again: the script appends the
+  new sentence to `Context` (more contexts = better learning).
 
 Quality rules:
 - Be accurate about meaning and register. If a phrase is rude, regional or old-fashioned, say so in `Register`.
@@ -124,11 +143,22 @@ then store the corrected version in `MyExample`.
    collocations and work jargon a B1–B2 learner would not fully understand or would not
    produce. Skip basic vocabulary, technical terms of my own field that I clearly already
    use, names and filler.
-2. Prefer phrases that appear in a full, clear sentence; use that sentence verbatim as `Sentence`.
+2. Prefer phrases that appear in a full, clear sentence. Apply **One target per sentence**: if two selected
+   phrases come from the same sentence, use it verbatim for one and write a new sentence for the other.
 3. Show a numbered list: phrase — English definition — the sentence (and a short Spanish hint in the chat only). Ask:
    "¿Cuáles agrego? (ej. `1,3,5` o `todas`)".
 4. Continue with Add mode (preview is the list itself plus the fields; no second confirmation
    unless I asked for changes). Source tag from the text (meeting, slack…).
+
+## Fix shared sentences
+
+1. Run `python3 ${CLAUDE_SKILL_DIR}/scripts/anki.py shared`. Each group is a set of notes using the same sentence.
+2. In each group keep the sentence for the most useful phrase. For every other note, write a new natural
+   sentence (bold only the target, easy surrounding words) and move the old sentence into `Context` as a quote.
+3. Show me the proposal (Spanish explanation, English card content), max 10 notes per batch. After my yes,
+   write `[{"noteId": N, "fields": {"Sentence": "...", "Context": "..."}, "audio": true}]` to
+   `~/.english-phrases/update.json` and run `anki.py update ~/.english-phrases/update.json`.
+   Review progress is kept (the cards are edited, not recreated).
 
 ## Review mode
 
@@ -155,11 +185,12 @@ then store the corrected version in `MyExample`.
 1. Needs Anki open. If closed, show the install steps below and stop.
 2. Run `setup` and report what was done (in Spanish), then show the `manual` steps as a checklist in Spanish.
    Desired retention is typed as **90** (the field is a percentage; typing 0.90 sets it to the minimum).
-3. **Upgrade old cards**: if `notes` > 0, run `list` and look for notes whose `Definition`, `Register`
+3. If `shared_sentences` > 0 in the status, run **Fix shared sentences**.
+4. **Upgrade old cards**: if `notes` > 0, run `list` and look for notes whose `Definition`, `Register`
    or `Prompt` are in Spanish, or that have `has_audio: false`. Propose English versions
    (same preview format, max 10 per batch) and, after my yes, write them as
    `[{"noteId": N, "fields": {...}, "audio": true}]` to `~/.english-phrases/update.json` and run `update`.
-4. Install steps (show only if Anki is closed, AnkiConnect is missing, or audio is missing):
+5. Install steps (show only if Anki is closed, AnkiConnect is missing, or audio is missing):
    - Anki desktop: https://apps.ankiweb.net
    - Tools → Add-ons → Get Add-ons → code `2055492159` (AnkiConnect) → restart Anki.
    - Audio: `pipx install edge-tts` (or `pip install --user edge-tts`). Needs internet when creating cards;
@@ -168,6 +199,7 @@ then store the corrected version in `MyExample`.
 
 ## Never
 - Never put Spanish on a card.
+- Never use the same sentence on two notes.
 - Never write to Anki without my confirmation in the preview (Review and upgrade rewrites also need a yes).
 - Never delete notes. Never touch decks or note types other than `English::Phrases` / `English Phrase`.
 - Never invent where I heard a phrase; if I did not say it, use the source and date only.

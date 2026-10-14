@@ -12,6 +12,7 @@ Usage:
   anki.py add <batch.json>    Add notes (dedup by phrase, audio, image), then sync
   anki.py update <file.json>  Rewrite fields / regenerate audio of existing notes, then sync
   anki.py list                All phrase notes (to upgrade old cards)
+  anki.py shared              Notes that share the same sentence (one target per sentence)
   anki.py flush               Add queued notes, then sync
   anki.py review [days]       JSON with recent failures, leeches and stats
   anki.py sync                Sync with AnkiWeb
@@ -249,6 +250,10 @@ def cmd_status():
             info["added_today"] = len(invoke("findNotes", query=f'"note:{MODEL}" added:1'))
             info["total_phrases"] = len(invoke("findNotes", query=f'"note:{MODEL}"'))
             info["due_today"] = len(invoke("findCards", query=f'"deck:{DECK}" is:due'))
+            if info["setup_done"]:
+                ids = invoke("findNotes", query=f'"note:{MODEL}"')
+                keys = [sent_key(n["fields"]["Sentence"]["value"]) for n in invoke("notesInfo", notes=ids)] if ids else []
+                info["shared_sentences"] = len(keys) - len(set(keys))
     except AnkiUnavailable:
         info["hint"] = "Open Anki desktop with AnkiConnect (add-on 2055492159)."
     except RuntimeError as e:
@@ -319,26 +324,41 @@ def build_note(item):
             "options": {"allowDuplicate": True}}
 
 
+def sent_key(text):
+    return norm(re.sub(r"\([^)]*\)", "", strip_html(text)))
+
+
 def add_items(items):
-    """Returns per-item results. Duplicates get the new context appended."""
-    existing = {}
+    """Returns per-item results.
+    - Same phrase already saved: the new context (and the new real sentence) is appended to Context.
+    - Same sentence already used by ANOTHER phrase: not added, status "sentence_conflict"
+      (one target per sentence; the caller must write a different sentence and retry).
+    """
+    existing, sentences = {}, {}
     ids = invoke("findNotes", query=f'"note:{MODEL}"')
     for n in invoke("notesInfo", notes=ids) if ids else []:
         existing[norm(n["fields"]["Phrase"]["value"])] = n
+        sentences.setdefault(sent_key(n["fields"]["Sentence"]["value"]), n["fields"]["Phrase"]["value"])
 
     results, audio_ok = [], True
     for item in items:
         note = build_note(item)
-        key = norm(note["fields"]["Phrase"])
+        f = note["fields"]
+        key = norm(f["Phrase"])
+        skey = sent_key(f["Sentence"])
         if key in existing:
             old = existing[key]
             ctx_old = old["fields"]["Context"]["value"]
-            ctx_new = note["fields"]["Context"]
+            ctx_new = f["Context"]
+            if skey != sent_key(old["fields"]["Sentence"]["value"]):
+                quote = "\u201c" + strip_html(f["Sentence"]) + "\u201d"
+                if norm(quote) not in norm(ctx_old):
+                    ctx_new = f"{ctx_new} \u2014 {quote}" if ctx_new else quote
             updates = {}
             if ctx_new and norm(ctx_new) not in norm(ctx_old):
                 updates["Context"] = f"{ctx_old}<br>{ctx_new}" if ctx_old else ctx_new
-            if note["fields"]["MyExample"] and not old["fields"]["MyExample"]["value"]:
-                updates["MyExample"] = note["fields"]["MyExample"]
+            if f["MyExample"] and not old["fields"]["MyExample"]["value"]:
+                updates["MyExample"] = f["MyExample"]
             if item.get("image") and not old["fields"].get("Image", {}).get("value"):
                 tmp = {"Image": ""}
                 add_image(tmp, item["image"])
@@ -346,17 +366,34 @@ def add_items(items):
             if updates:
                 invoke("updateNoteFields", note={"id": old["noteId"], "fields": updates})
             invoke("addTags", notes=[old["noteId"]], tags=" ".join(note["tags"]))
-            results.append({"phrase": note["fields"]["Phrase"], "status": "exists",
+            results.append({"phrase": f["Phrase"], "status": "exists",
                             "updated": list(updates), "noteId": old["noteId"]})
+        elif skey in sentences:
+            results.append({"phrase": f["Phrase"], "status": "sentence_conflict",
+                            "sentence": strip_html(f["Sentence"]),
+                            "conflictsWith": sentences[skey],
+                            "hint": "Write a different natural sentence for this phrase; keep the heard one in Context."})
         else:
-            audio_ok = add_audio(note["fields"]) and audio_ok
-            add_image(note["fields"], item.get("image"))
+            audio_ok = add_audio(f) and audio_ok
+            add_image(f, item.get("image"))
             nid = invoke("addNote", note=note)
-            existing[key] = {"noteId": nid, "fields": {f: {"value": v} for f, v in note["fields"].items()}}
-            results.append({"phrase": note["fields"]["Phrase"], "status": "added", "noteId": nid,
-                            "audio": bool(note["fields"]["SentenceAudio"]),
-                            "image": bool(note["fields"]["Image"])})
+            existing[key] = {"noteId": nid, "fields": {k: {"value": v} for k, v in f.items()}}
+            sentences[skey] = f["Phrase"]
+            results.append({"phrase": f["Phrase"], "status": "added", "noteId": nid,
+                            "audio": bool(f["SentenceAudio"]), "image": bool(f["Image"])})
     return results, audio_ok
+
+
+def cmd_shared():
+    """Groups of notes that use the same sentence (should be one target per sentence)."""
+    ensure_ready()
+    groups = {}
+    for n in notes_brief(f'"note:{MODEL}"'):
+        groups.setdefault(sent_key(n["Sentence"]), []).append(
+            {"noteId": n["noteId"], "Phrase": n.get("Phrase", ""), "Sentence": n.get("Sentence", ""),
+             "Context": n.get("Context", ""), "Example": n.get("Example", "")})
+    shared = [g for g in groups.values() if len(g) > 1]
+    out({"groups": shared, "notes_to_fix": sum(len(g) - 1 for g in shared)})
 
 
 def try_sync():
@@ -506,6 +543,8 @@ def main(argv):
             cmd_update(argv[2])
         elif cmd == "list":
             cmd_list()
+        elif cmd == "shared":
+            cmd_shared()
         elif cmd == "flush":
             cmd_flush()
         elif cmd == "review":
