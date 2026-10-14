@@ -141,6 +141,9 @@ def norm(text):
 
 def tts_command():
     exe = shutil.which("edge-tts")
+    if not exe:  # pipx installs here; it may not be on PATH yet
+        local = os.path.expanduser("~/.local/bin/edge-tts")
+        exe = local if os.access(local, os.X_OK) else None
     if exe:
         return [exe]
     try:
