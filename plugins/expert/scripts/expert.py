@@ -21,6 +21,7 @@ Usage:
   expert.py hook                     SessionStart hook: sync and print a short context block
 """
 import datetime
+import filecmp
 import json
 import os
 import re
@@ -204,6 +205,52 @@ def seed(vault):
         os.makedirs(os.path.join(vault, sub), exist_ok=True)
 
 
+def remote_branch(vault):
+    """origin's default branch as 'origin/<name>', or '' when the remote has no branches."""
+    head = git(["symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD"], vault)[1]
+    if head:
+        return head
+    for name in ("main", "master"):
+        if git(["rev-parse", "-q", "--verify", f"origin/{name}"], vault)[0] == 0:
+            return f"origin/{name}"
+    return ""
+
+
+def adopt_remote(vault, info):
+    """The vault has a remote but no upstream (a vault created before the repo was set).
+
+    Empty remote: nothing to do; the first commit pushes and sets the upstream.
+    No local commits: check out the remote branch, dropping untouched seed files that would block it.
+    Local commits: rename the branch to match and replay those commits on top of the remote.
+    """
+    if git(["fetch", "-q", "origin"], vault, timeout=PULL_TIMEOUT)[0] != 0:
+        info["action"] = "offline"
+        return
+    upstream = remote_branch(vault)
+    if not upstream:
+        return
+    branch = upstream.split("/", 1)[1]
+    if git(["rev-parse", "-q", "--verify", "HEAD"], vault)[0] != 0:
+        for name in ("SCHEMA.md", "README.md"):
+            dest, src = os.path.join(vault, name), os.path.join(TEMPLATES, "vault-" + name)
+            if os.path.isfile(dest) and os.path.isfile(src) and filecmp.cmp(dest, src, shallow=False):
+                os.remove(dest)
+        code, _, err = git(["checkout", "-q", "-B", branch, "--track", upstream], vault)
+        if code == 0:
+            info["action"] = "adopted-remote"
+        else:
+            info["warning"] = f"could not check out {upstream} ({git_error(err)}); move the local files away and retry"
+        return
+    git(["branch", "-q", "-M", branch], vault)
+    git(["branch", "-q", "--set-upstream-to", upstream], vault)
+    code, _, err = git(["pull", "--rebase", "--autostash", "-q"], vault, timeout=PULL_TIMEOUT)
+    if code == 0:
+        info["action"] = "rebased-onto-remote"
+    else:
+        git(["rebase", "--abort"], vault)
+        info["warning"] = f"could not replay local notes onto {upstream} ({git_error(err)}); resolve in {vault}"
+
+
 def ensure():
     """Make the vault exist and be up to date. Returns a dict describing what happened."""
     vault, repo = vault_path(), setting("repo")
@@ -232,13 +279,7 @@ def ensure():
         elif repo and git(["remote", "get-url", "origin"], vault)[1] != remote_url(repo):
             git(["remote", "set-url", "origin", remote_url(repo)], vault)
         if has_remote(vault) and git(["rev-parse", "--abbrev-ref", "@{u}"], vault)[0] != 0:
-            # Remote set but never pushed or fetched: adopt the remote branch if it exists.
-            if git(["fetch", "-q", "origin"], vault, timeout=PULL_TIMEOUT)[0] == 0:
-                remote_head = git(["symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD"], vault)[1] \
-                    or ("origin/main" if git(["rev-parse", "-q", "--verify", "origin/main"], vault)[0] == 0 else "")
-                if remote_head and git(["rev-parse", "-q", "--verify", "HEAD"], vault)[0] != 0:
-                    git(["checkout", "-q", "-B", remote_head.split("/", 1)[1], "--track", remote_head], vault)
-                    info["action"] = "adopted-remote"
+            adopt_remote(vault, info)
         elif has_remote(vault):
             code, _, err = git(["pull", "--rebase", "--autostash", "-q"], vault, timeout=PULL_TIMEOUT)
             info["action"] = "pulled" if code == 0 else "offline"
