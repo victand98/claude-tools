@@ -1,0 +1,21 @@
+{
+  "name": "expert",
+  "description": "Become an expert in any project: a personal, git-synced knowledge base that answers project questions from notes first, then code, git history, a code graph and connected MCP servers, with maps, drift checks and Anki quizzes",
+  "author": {
+    "name": "Víctor Andrés Rojas"
+  },
+  "userConfig": {
+    "vault_repo": {
+      "type": "string",
+      "title": "Vault repository",
+      "description": "Private GitHub repo (owner/name) or git URL that stores your knowledge base. Leave empty for a local-only vault.",
+      "default": ""
+    },
+    "vault_path": {
+      "type": "string",
+      "title": "Vault folder",
+      "description": "Where the vault is cloned on this machine",
+      "default": "~/.expert/vault"
+    }
+  }
+}

@@ -63,6 +63,24 @@ Requirements (once per machine):
 If Anki is closed, notes are queued in `~/.english-phrases/pending.json` and added on the next run.
 Audio uses Anki's built-in TTS (`{{tts en_US:...}}`), so voices come from the OS.
 
+### expert
+
+Full guide: [plugins/expert/README.md](plugins/expert/README.md)
+
+```
+/plugin install expert@victor-tools
+```
+
+| Command | What it does |
+|---|---|
+| `/expert:onboard [deep] [vault <owner/name>]` | Builds a knowledge base for the current repo (overview, glossary, architecture, domain, people, decisions, map, reading path) |
+| `/expert:ask <question>` | Answers from the knowledge base first, then code, git history, code graph and MCP servers; saves what it learns |
+| `/expert:map <type> [html]` | Mermaid map: architecture, domain, flow, deps, owners or the KB itself |
+| `/expert:quiz [topic]` | Anki flashcards (or a chat quiz) from the knowledge base |
+| `/expert:lint [fix]` | Finds pages whose source code changed, plus broken links and orphans |
+
+The knowledge base is a Markdown git repo (keep it private), synced across devices and readable in Obsidian.
+
 ## Develop
 
 ```
