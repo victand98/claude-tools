@@ -48,9 +48,12 @@ The plugin has no `version`, so every pushed commit is a new version.
 |---|---|
 | `/design:redesign-page <page> <goal>` | Figma-first redesign or migration of a screen onto the project's design system |
 
-Works in any project: it reads the project's own design docs (`DESIGN.md`, `CLAUDE.md`, `AGENTS.md`,
-`.claude/rules/`) and asks for anything it cannot find, such as the Figma library file, breakpoints, themes and
-verification commands. It only runs by explicit command.
+Works in any project on web, iOS, Android or cross-platform apps: it reads the project's own design docs
+(`DESIGN.md`, `CLAUDE.md`, `AGENTS.md`, `.claude/rules/`), detects the target platforms, and asks for anything it
+cannot find, such as the Figma library file, breakpoints, themes and verification commands. Platform checks live in
+`plugins/design/skills/redesign-page/references/` (`baseline.md`, `web.md`, `mobile.md`) and load only for the
+platforms in scope. When a project defines no breakpoints it uses window size classes (360, 600, 900, plus 1440 for
+web and a landscape-phone frame) and a WCAG 2.2 AA accessibility baseline. It only runs by explicit command.
 
 Requirements: the Figma MCP connector, ideally with the Figma plugin skills (`figma-use`,
 `figma-generate-library`, `figma-generate-design`).
