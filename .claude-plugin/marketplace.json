@@ -11,6 +11,11 @@
       "description": "Daily developer workflows: standup generation from git, GitHub and Linear"
     },
     {
+      "name": "design",
+      "source": "./plugins/design",
+      "description": "Design system workflows: redesign or migrate a screen onto a project's design system, Figma first"
+    },
+    {
       "name": "english",
       "source": "./plugins/english",
       "description": "English phrases from work → explained and saved as Anki cards (AnkiConnect), with weekly review"
