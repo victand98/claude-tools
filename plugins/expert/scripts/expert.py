@@ -553,6 +553,14 @@ def take_repo(args):
     return os.getcwd()
 
 
+def without_repo(args):
+    """Drop a stray `--repo DIR` so it doesn't end up in a commit message."""
+    if "--repo" in args:
+        i = args.index("--repo")
+        return args[:i] + args[i + 2:]
+    return args
+
+
 def main(argv):
     cmd, args = (argv[1] if len(argv) > 1 else "status"), argv[2:]
     try:
@@ -566,8 +574,8 @@ def main(argv):
             cmd_scaffold(take_repo(args))
         elif cmd == "pages":
             cmd_pages(take_repo(args))
-        elif cmd == "commit" and args:
-            cmd_commit(" ".join(args))
+        elif cmd == "commit" and without_repo(args):
+            cmd_commit(" ".join(without_repo(args)))
         elif cmd == "lint":
             cmd_lint(take_repo(args))
         elif cmd == "hook":
